@@ -15,7 +15,7 @@ namespace OptionsTechnicalAnalysis.Repositories
         public async Task<SmaRoot> Get(DailySimpleMovingAverageQueryObject model)
         {
             var client = new HttpClient();
-            var task = await client.GetAsync($"https://www.alphavantage.co/query?function=SMA&symbol={model.Symbol}&interval=daily&time_period={model.TimePeriod}&series_type={model.SeriesType}&apikey=CWTF4OA3ZOH6VSB2");
+            var task = await client.GetAsync($"https://www.alphavantage.co/query?function=SMA&symbol={model.Symbol}&interval=daily&time_period={model.TimePeriod}&series_type={model.SeriesType}&apikey=apikey");
             var jsonString = task.Content.ReadAsStringAsync().Result;
 
             //dynamic fyn = JsonConvert.DeserializeObject(jsonString);
