@@ -1,0 +1,195 @@
+﻿@model OptionsTechnicalAnalysis.Models.TimeSeriesDataRoot
+@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+    Layout = "_Layout";
+}
+
+<style>
+    #dailyCandleStickGraph {
+        background-color: black;
+    }
+
+    .yrule {
+        fill: lightgray;
+    }
+
+    .xrule text {
+        fill: lightgray;
+    }
+</style>
+
+<div class="row">
+    <h1><b><u>Daily Time Series Data</u></b></h1>
+</div>
+<div class="row" style="margin-top:25px;">
+    <form method="post" action="/TimeSeriesData/SearchTimeSeriesDaily">
+        <div class="row">
+            <label for="symbol" class="col-md-1">Search:</label>
+            <div class="col-md-3">
+                <input class="form-control" name="symbol" type="text" placeholder="Enter Stock Symbol" />
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </div>
+    </form>
+</div>
+<div class="row" style="margin-top:40px;">
+    <h3><b>@Model.metaData.Symbol.ToUpper()</b></h3>
+</div>
+<div class="row" style="margin-top:20px;">
+    <div class="col-md-4" style="height: 600px; overflow:scroll; background-color:white;">
+        <table id="timeSeriesDailyTable" class="col-md-12 table table-striped">
+            <thead>
+                <tr>
+                    <th class="col-md-4">Date</th>
+                    <th class="col-md-4">Close Price</th>
+                    <th class="col-md-4">Volume</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach(var i in Model.Data)
+                {
+                    <tr>
+                        <td>@i.Key</td>
+                        <td>@i.Value.close</td>
+                        <td>@i.Value.volume</td>
+                    </tr>
+
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="col-md-8" style="padding-left: 40px;">
+        <div id="dailyCandleStickGraph"></div>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script type="text/javascript">
+    
+
+    var dailyTimeSeriesData = [];
+
+    @foreach(var i in Model.Data)
+    {
+        @:dailyTimeSeriesData.push({date: '@i.Key', high: '@i.Value.high', low: '@i.Value.low', open: '@i.Value.open', close: '@i.Value.close'})
+    }
+
+    console.log(dailyTimeSeriesData);
+
+    var width = 730;
+    var height = 500;
+
+    function min(a, b) { return a < b ? a : b; }
+
+    function max(a, b) { return a > b ? a : b; }
+    function buildChart(data) {
+
+        data.forEach(function (d) {
+            d.date = new Date(d.date);
+            d.high = +d.high;
+            d.low = +d.low;
+            d.open = +d.open;
+            d.close = +d.close;
+        });
+
+        var margin = 50;
+
+        var chart = d3.select("#dailyCandleStickGraph")
+            .append("svg")
+            .attr("class", "chart")
+            .attr("width", width)
+            .attr("height", height);
+        //map is going to create an array with all the lows and then d3.min will take the min out of all of them
+        var y = d3.scaleLinear()
+            .domain([d3.min(data.map(function (x) { return x["low"]; })), d3.max(data.map(function (x) { return x["high"]; }))])
+            .range([height - margin, margin]);
+
+        //title
+        chart.append("text")
+            .attr("x", (width / 2))
+            .attr("y", (margin / 2))
+            .attr("text-anchor", "middle")
+            .style("font-size", "16px")
+            .style("fill", "white")
+            .style("text-decoration", "underline")
+            .text("Candle Stick Chart");
+
+        var x = d3.scaleTime()
+            .domain(d3.extent(data, function (d) { return d["date"]; }))
+            .range([margin, width - margin]);
+
+        //grid for the chart; x and y axis
+        chart.selectAll("line.x")
+            .data(x.ticks(10))
+            .enter().append("line")
+            .attr("class", "x")
+            .attr("x1", x)
+            .attr("x2", x)
+            .attr("y1", margin)
+            .attr("y2", height - margin)
+            .attr("stroke", "#ccc");
+        chart.selectAll("line.y")
+            .data(y.ticks(10))
+            .enter().append("line")
+            .attr("class", "y")
+            .attr("x1", margin)
+            .attr("x2", width - margin)
+            .attr("y1", y)
+            .attr("y2", y)
+            .attr("stroke", "#ccc");
+
+        chart.append("g")
+            .attr("transform", "translate(0," + 450 + ")") //need to change this 450 to a variable- it is how far down the axis will go
+            .attr("class", "xrule")   // give it a class so it can be used to select only xaxis labels  or change color
+            .call(d3.axisBottom(x))   //.call(d3.axisBottom(x).ticks(5)) to change ticks- by default it is 10
+            .selectAll("text")
+            .style("text-anchor", "end")
+            .attr("dx", "-.8em")
+            .attr("dy", ".15em")
+            .attr("transform", function (d) {
+                return "rotate(-65)"
+            });
+
+
+        //text.yrule explained: we append text then give it a class name of yrule
+        chart.selectAll("text.yrule")
+            .data(y.ticks(10))
+            .enter()
+            .append("text")
+            .attr("class", "yrule")
+            .attr("x", 0)
+            .attr("y", y)
+            .attr("dy", 0)
+            .attr("dx", 20)
+            .attr("text-anchor", "middle")
+            .text(String);
+
+        //add rectangles; CHANGE COLORS
+        chart.selectAll("rect")
+            .data(data)
+            .enter().append("rect")
+            .attr("x", function (d) { return x(d["date"]); })
+            .attr("y", function (d) { return y(max(d["open"], d["close"])); })
+            .attr("height", function (d) { return y(min(d["open"], d["close"])) - y(max(d["open"], d["close"])); })
+            .attr("width", function (d) { return 0.5 * (width - 2 * margin) / data.length; })
+            .attr("fill", function (d) { return d["open"] > d["close"] ? "red" : "green"; });
+
+        //add a stem to the rectangle: we add a line and give it a class name of stem; the stem will rep the open and close
+        //MIGHT HAVE TO CHANGE THE COLORS LOOKS LIKE IF OPEN IS HIGHER THAN CLOSE WE ARE DOING RED BUT WE WANT GREEN- can also do diff for stem
+        chart.selectAll("line.stem")
+            .data(data)
+            .enter().append("line")
+            .attr("class", "stem")
+            .attr("x1", function (d) { return x(d["date"]) + 0.25 * (width - 2 * margin) / data.length; })
+            .attr("x2", function (d) { return x(d["date"]) + 0.25 * (width - 2 * margin) / data.length; })
+            .attr("y1", function (d) { return y(d["high"]); })
+            .attr("y2", function (d) { return y(d["low"]); })
+            .attr("stroke", function (d) { return d.open > d.close ? "red" : "green"; })
+    }
+
+    buildChart(dailyTimeSeriesData);
+</script>
