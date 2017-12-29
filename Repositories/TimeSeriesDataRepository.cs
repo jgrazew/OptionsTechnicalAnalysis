@@ -16,7 +16,7 @@ namespace OptionsTechnicalAnalysis.Repositories
         {
             var client = new HttpClient();
             //full outPutSize returns up to 20 years of historical data
-            var task = await client.GetAsync($"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={model.Symbol}&outputsize={model.OutputSize}&apikey=CWTF4OA3ZOH6VSB2");
+            var task = await client.GetAsync($"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={model.Symbol}&outputsize={model.OutputSize}&apikey=apikey");
             var jsonString = task.Content.ReadAsStringAsync().Result; 
 
             TimeSeriesDataRoot res = JsonConvert.DeserializeObject<TimeSeriesDataRoot>(jsonString);
